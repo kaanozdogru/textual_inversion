@@ -19,61 +19,51 @@ train_b="train-b"
 train_a_dir="data/${train_a}"
 train_b_dir="data/${train_b}"
 
-# Create directories for the first split (9 train + 1 eval)
-mkdir -p "${train_a_dir}-9" "${train_b_dir}-9" "${train_a_dir}-eval-9"
+# Define the split sizes
+declare -a split_sizes=(9 5 2 1)
 
-echo "Directories created:"
-echo "${train_a_dir}-9"
-echo "${train_b_dir}-9"
-echo "${train_a_dir}-eval-9"
+# Loop through each split size
+for split_size in "${split_sizes[@]}"; do
+    echo "Processing split size: $split_size"
+    
+    # Create directories for training and eval based on the split size
+    mkdir -p "${train_a_dir}-${split_size}" "${train_b_dir}-${split_size}" "${train_a_dir}-eval-${split_size}"
+    
+    echo "Directories created for split size $split_size:"
+    echo "${train_a_dir}-${split_size}"
+    echo "${train_b_dir}-${split_size}"
+    echo "${train_a_dir}-eval-${split_size}"
+    
+    # Copy the specified number of pairs for training
+    for i in $(seq 1 $split_size); do
+        cp "${train_a_dir}/${i}.jpg" "${train_a_dir}-${split_size}"
+        cp "${train_b_dir}/${i}.jpg" "${train_b_dir}-${split_size}"
+    done
 
-# Copy the first 9 pairs for training
-for i in $(seq 1 9); do
-    cp "${train_a_dir}/${i}.jpg" "${train_a_dir}-9"
-    cp "${train_b_dir}/${i}.jpg" "${train_b_dir}-9"
+    # Copy the remaining images for evaluation
+    for i in $(seq $((split_size + 1)) 10); do
+        cp "${train_a_dir}/${i}.jpg" "${train_a_dir}-eval-${split_size}"
+    done
+
+    export DATA_ROOT="${train_a_dir}-${split_size}"
+    export EDIT_ROOT="${train_b_dir}-${split_size}"
+    export EVAL_ROOT="${train_a_dir}-eval-${split_size}"
+    export OUTPUT_PATH="results/${train_b}-${split_size}"
+
+    echo "Environment variables set for split size $split_size:"
+    echo "DATA_ROOT=$DATA_ROOT"
+    echo "EDIT_ROOT=$EDIT_ROOT"
+    echo "EVAL_ROOT=$EVAL_ROOT"
+    echo "OUTPUT_PATH=$OUTPUT_PATH"
+
+    # Uncomment to run your Python training command
+    # python train_inversion.py --data_root=$DATA_ROOT \
+    #                           --edit_root=$EDIT_ROOT \
+    #                           --eval_root=$EVAL_ROOT \
+    #                           --output_path=$OUTPUT_PATH \
+    #                           --init_words "word1" "word2"
+    
+    # Optional: Cleanup - delete created directories after training is finished
+    echo "Training finished for split size $split_size, deleting folders"
+    rm -r "${train_a_dir}-${split_size}" "${train_b_dir}-${split_size}" "${train_a_dir}-eval-${split_size}"
 done
-
-# Copy the 10th image for evaluation
-cp "${train_a_dir}/10.jpg" "${train_a_dir}-eval-9"
-
-export DATA_ROOT="${train_a_dir}-9"
-export EDIT_ROOT="${train_b_dir}-9"
-export EVAL_ROOT="${train_a_dir}-eval-9"
-export OUTPUT_PATH="results/${train_b}"
-
-echo "Exported:"
-echo DATA_ROOT
-echo $DATA_ROOT
-echo EDIT_ROOT
-echo $EDIT_ROOT
-echo EVAL_ROOT
-echo $EVAL_ROOT
-echo OUTPUT_PATH
-echo $OUTPUT_PATH
-
-# python train_inversion.py --data_root=$DATA_ROOT \
-#                           --edit_root=$EDIT_ROOT \
-#                           --eval_root=$EVAL_ROOT \
-#                           --output_path=$OUTPUT_PATH \
-#                           --init_words "word1" "word2"
-
-echo "Training finished, deleting folders"
-rm -r $DATA_ROOT $EDIT_ROOT $EVAL_ROOT
-# # Create directories for the second split (5 train + 5 eval)
-# mkdir -p train-a-5 train-b-5 eval-5
-
-# # Copy the first 5 pairs for training
-# for i in $(seq 1 5); do
-#     cp "${train_a_dir}/${i}.png" "train-a-5/"
-#     cp "${train_b_dir}/${i}.png" "train-b-5/"
-# done
-
-# # Copy the next 5 images for evaluation
-# for i in $(seq 6 10); do
-#     cp "${train_a_dir}/${i}.png" "eval-5/"
-# done
-
-# echo "Folders prepared for training and evaluation."
-
-
-
