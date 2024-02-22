@@ -98,6 +98,9 @@ if __name__ == "__main__":
     dummy = OmegaConf.from_dotlist([])
     model_config = OmegaConf.merge(*config_paths, dummy)
     train_config = model_config.pop("lightning", OmegaConf.create())
+
+    model_config.model.params.personalization_config.params.initializer_words = init_words
+
     # trainer_config = train_parameters.get("trainer", OmegaConf.create())
     model: LatentDiffusion = load_model_from_config(model_config, ckpt)
     model = model.eval().to(device)
@@ -108,7 +111,7 @@ if __name__ == "__main__":
     # data_root = 'data/headshot'
     # data_eval_root = 'data/headshoteval'
     # edit_root = 'data/headshothat'
-    model_config.model.params.personalization_config.params.initializer_words = init_words
+    
 
     model_config.data.params.train.params.data_root = data_root
     model_config.data.params.validation.params.data_root = data_eval_root
@@ -116,6 +119,10 @@ if __name__ == "__main__":
     model_config.data.params.train.params.edit_root = edit_root
     model_config.data.params.validation.params.edit_root = data_eval_root
 
+    model_config.data.params.train.params.horizontal_flip = True
+    model_config.data.params.train.params.random_crop = True
+    model_config.data.params.train.params.horizontal_flip = False
+    model_config.data.params.train.params.horizontal_flip = False
     # annoying that we have to use lightning here
     # (can do another way but will take more code)
     # its ok, we just grab the dataloader from this
@@ -141,7 +148,7 @@ if __name__ == "__main__":
     cur = time.time()
     themean = 0.0
     thelist=[]
-    for i in range(6):
+    for i in range(16):
         print(i, "iteration")
         for j,raw_batch in enumerate(train_loader):
             print("iteration: ", i,"example in training set #: ", j)
@@ -166,7 +173,7 @@ if __name__ == "__main__":
                 os.mkdir(output_path + "/embeddings/")
             model.embedding_manager.save(output_path + "/" +  "embeddings/" + "/embedding_" + str(i) + ".pt")
             
-            if i%1==0 and j%100==0:
+            if i%2==0 and j%100==0:
 
                 if not os.path.isdir(output_path + "/" + str(i)):
                     os.mkdir(output_path + "/" + str(i))
