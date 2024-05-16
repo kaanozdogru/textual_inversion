@@ -2,7 +2,7 @@
 
 # https://github.com/mchiquier/textual_inversion
 
-cd textual_inversion
+# cd textual_inversion
 
 # # install required stuff:
 # pip install -r requirements.txt
@@ -14,19 +14,25 @@ cd textual_inversion
 # !/bin/bash
 
 # Define data
-# data_list=("brown_bear" "cheese" "cowboy_hat" "coffee_mug")
-data_list=("brown_bear" "coffee_mug")
+# Accept a string of data classes as an argument
+
+echo "CUDA_VISIBLE_DEVICES set to: $CUDA_VISIBLE_DEVICES"
+data_classes_str=$1
+
+# Convert string to array
+IFS=',' read -r -a data_list <<< "$data_classes_str"
 
 for data_class in "${data_list[@]}"; do
 
     # Define source directories
     train_a="${data_class}/train-a"
     train_b="${data_class}/train-b"
-    train_a_dir="data/${train_a}"
-    train_b_dir="data/${train_b}"
+    train_a_dir="/proj/vondrick2/ko2541/fewshot_data/fewshot_data/${train_a}"
+    train_b_dir="/proj/vondrick2/ko2541/fewshot_data/fewshot_data/${train_b}"
 
     # Define the split sizes
     declare -a split_sizes=(9 5 2 1)
+    # declare -a split_sizes=(9)
 
     # Loop through each split size
     for split_size in "${split_sizes[@]}"; do
@@ -54,7 +60,7 @@ for data_class in "${data_list[@]}"; do
         export DATA_ROOT="${train_a_dir}-${split_size}"
         export EDIT_ROOT="${train_b_dir}-${split_size}"
         export EVAL_ROOT="${train_a_dir}-eval-${split_size}"
-        export OUTPUT_PATH="results/${data_class}-${split_size}"
+        export OUTPUT_PATH="/proj/vondrick2/ko2541/vmresults/segmentation-task/results/${data_class}-${split_size}"
 
         echo "Environment variables set for split size $split_size:"
         echo "DATA_ROOT=$DATA_ROOT"
@@ -63,14 +69,14 @@ for data_class in "${data_list[@]}"; do
         echo "OUTPUT_PATH=$OUTPUT_PATH"
 
         # Uncomment to run your Python training command
-        # python train_inversion.py --data_root=$DATA_ROOT \
-        #                         --edit_root=$EDIT_ROOT \
-        #                         --eval_root=$EVAL_ROOT \
-        #                         --output_path=$OUTPUT_PATH \
-        #                         --init_words "segment" "map" "croissant"
+        python train_inversion.py --data_root=$DATA_ROOT \
+                                --edit_root=$EDIT_ROOT \
+                                --eval_root=$EVAL_ROOT \
+                                --output_path=$OUTPUT_PATH \
+                                --init_words "segment" "map" 
         
         # Optional: Cleanup - delete created directories after training is finished
         echo "Training finished for split size $split_size, deleting folders"
-        # rm -r "${train_a_dir}-${split_size}" "${train_b_dir}-${split_size}" "${train_a_dir}-eval-${split_size}"
+        rm -r "${train_a_dir}-${split_size}" "${train_b_dir}-${split_size}" "${train_a_dir}-eval-${split_size}"
     done
 done

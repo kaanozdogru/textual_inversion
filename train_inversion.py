@@ -79,7 +79,7 @@ if __name__ == "__main__":
     '''
     global vars, consider making a script to set these
     '''
-    ckpt = 'models/ldm/stable-diffusion-v1/instruct-pix2pix-00-22000.ckpt'
+    ckpt = '/proj/vondrick2/ko2541/models/instruct-pix2pix-00-22000.ckpt'
     yml_paths = ['configs/latent-diffusion/instructpix2pix.yaml', ]
     data_root = opt.data_root
     edit_root = opt.edit_root
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     train_loader = data._train_dataloader()
     val_loader = data._val_dataloader()
 
-    raw_eval_batch = next(iter(val_loader))
+    raw_eval_batch, img_pth_test = next(iter(val_loader))
     #torch.manual_seed(0)
     noise=None
     raw_eval_batch['edited'] = raw_eval_batch['edited'].to(device)
@@ -150,7 +150,7 @@ if __name__ == "__main__":
     thelist=[]
     for i in range(16):
         print(i, "iteration")
-        for j,raw_batch in enumerate(train_loader):
+        for j,(raw_batch, img_pth_train) in enumerate(train_loader):
             print("iteration: ", i,"example in training set #: ", j)
             x_start = raw_batch['edited']
             raw_batch['edited'] = raw_batch['edited'].to(device)
@@ -180,34 +180,47 @@ if __name__ == "__main__":
 
                 if not os.path.isdir(output_path + "/" + str(i) + "/" + str(j) + "/"):
                     os.mkdir(output_path + "/" + str(i) + "/" +str(j) + "/")
+                
+                if not os.path.isdir(output_path + "/" + str(i) + "/" + str(j) + "/test/"):
+                    os.mkdir(output_path + "/" + str(i) + "/" +str(j) + "/test/")
         
-                log = model.log_images(7.5, 1.5, raw_batch)
+                # log = model.log_images(7.5, 1.5, raw_batch)
                 log_eval = model.log_images(7.5, 1.5, raw_eval_batch)
                 key ='samples'
-                log[key] = torch.clamp(log[key].detach().cpu(),-1.,1)
-                grid = torchvision.utils.make_grid(log[key], nrow=4)
-                grid = (grid + 1.0) / 2.0 
-                grid = grid.transpose(0, 1).transpose(1, 2).squeeze(-1)
-                grid = grid.numpy()
-                grid = (grid * 255).astype(np.uint8)
-                im = Image.fromarray(grid)
-                filename = str(loss.item()) + "_" + str(key) + "_" + str(j) + "_" + str(log["txt_scale"]) + \
-                "_" + str(log["image_scale"]) + ".jpg"
-                #pdb.set_trace()
-                im.save(output_path + "/" + str(i) + "/" + str(j) + "/" + filename)
+                out = torch.clamp(log_eval[key].detach().cpu(),-1.,1)
+                # Iterate through each image in the batch
+                for img, pth in zip(out,img_pth_test):
+                    # Normalize the image to be in the [0, 1] range
+                    img = (img + 1.0) / 2.0
+                    
+                    # Permute the image dimensions from [C, H, W] to [H, W, C] for PIL compatibility
+                    img = img.permute(1, 2, 0)
+                    
+                    # Convert the tensor to a numpy array
+                    img = img.numpy()
+                    
+                    # Scale the values to [0, 255] and convert to uint8 for image saving
+                    img = (img * 255).astype(np.uint8)
+                    
+                    # Create an image from the numpy array
+                    im = Image.fromarray(img)
+
+                    filename = os.path.basename(pth)
+                    # Save the image to disk
+                    im.save(output_path + "/" + str(i) + "/" + str(j) + "/test/" + filename)
                 #pdb.set_trace()
 
-                log_eval[key] = torch.clamp(log_eval[key].detach().cpu(),-1.,1)
-                grid = torchvision.utils.make_grid(log_eval[key], nrow=4)
-                grid = (grid + 1.0) / 2.0 
-                grid = grid.transpose(0, 1).transpose(1, 2).squeeze(-1)
-                grid = grid.numpy()
-                grid = (grid * 255).astype(np.uint8)
-                im = Image.fromarray(grid)
-                filename = str(loss.item()) + "_" + "eval" + "_" + str(j) + "_" + str(log["txt_scale"]) + \
-                "_" + str(log["image_scale"]) + ".jpg"
-                im.save(output_path + "/" + str(i) + "/" + str(j) + "/" + filename)
-                #pdb.set_trace()
+                
+                # grid = torchvision.utils.make_grid(log_eval[key], nrow=4)
+                # grid = (grid + 1.0) / 2.0 
+                # grid = grid.transpose(0, 1).transpose(1, 2).squeeze(-1)
+                # grid = grid.numpy()
+                # grid = (grid * 255).astype(np.uint8)
+                # im = Image.fromarray(grid)
+                # filename = str(loss.item()) + "_" + "eval" + "_" + str(j) + "_" + str(log["txt_scale"]) + \
+                # "_" + str(log["image_scale"]) + ".jpg"
+                # im.save(output_path + "/" + str(i) + "/" + str(j) + "/" + filename)
+                # #pdb.set_trace()
                 
                 
             #print(loss)
